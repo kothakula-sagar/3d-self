@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kothakula Sagar — Digital Marketing Executive</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html, body{ width:100%; height:100%; overflow:hidden; background:#0c0e14; font-family:'Inter', sans-serif; -webkit-tap-highlight-color:transparent; }
+  #canvas-wrap{ position:fixed; inset:0; }
+  canvas{ display:block; touch-action:none; }
+
+  #hud-top{
+    position:fixed; top:0; left:0; right:0;
+    padding: 18px 20px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    z-index:10; pointer-events:none;
+  }
+  #hud-top .brand{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:15px; color:#EDEEF3;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  #hud-top .role{
+    font-size:11px; color:#9297AC;
+    margin-top:2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  #hint{
+    position:fixed; bottom: 18px; left:50%; transform:translateX(-50%);
+    font-size:12px; color:#9297AC; z-index:10;
+    background:rgba(12,14,20,0.55); backdrop-filter:blur(6px);
+    padding:8px 14px; border-radius:100px;
+    border:1px solid rgba(255,255,255,0.08);
+    pointer-events:none;
+    transition:opacity 0.4s ease;
+  }
+
+  /* touch joystick */
+  #joystick{
+    position:fixed; left:24px; bottom:24px;
+    width:100px; height:100px; z-index:12;
+    display:none;
+  }
+  #joystick.active{ display:block; }
+  #joy-base{
+    width:100%; height:100%; border-radius:50%;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.14);
+  }
+  #joy-knob{
+    position:absolute; top:50%; left:50%;
+    width:44px; height:44px; margin:-22px 0 0 -22px;
+    border-radius:50%;
+    background:rgba(255,107,74,0.85);
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  #look-zone{
+    position:fixed; right:0; top:0; bottom:0; width:55%; z-index:11;
+  }
+
+  /* Info panel */
+  #panel{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    max-width:520px; margin:0 auto;
+    background:#171B2E;
+    border-top:1px solid rgba(255,255,255,0.08);
+    border-radius:20px 20px 0 0;
+    padding:24px 22px 30px;
+    transform:translateY(110%);
+    transition:transform 0.32s cubic-bezier(.2,.8,.2,1);
+  }
+  #panel.open{ transform:translateY(0); }
+  #panel .close{
+    position:absolute; top:14px; right:18px; font-size:22px; color:#9297AC; cursor:pointer;
+  }
+  #panel .tag{
+    font-family:'Space Grotesk', sans-serif; font-size:12px; color:#FF6B4A; margin-bottom:8px;
+  }
+  #panel h2{
+    font-family:'Space Grotesk', sans-serif; font-size:22px; font-weight:700; color:#EDEEF3; margin-bottom:10px;
+  }
+  #panel .desc{ font-size:14px; line-height:1.6; color:#C6C9D6; }
+  #panel .stack{ margin-top:14px; display:flex; flex-wrap:wrap; gap:8px; }
+  #panel .stack span{
+    font-size:11px; padding:5px 10px; border-radius:100px;
+    background:rgba(127,232,196,0.1); color:#7FE8C4;
+    border:1px solid rgba(127,232,196,0.2);
+  }
+
+  #contact-strip{
+    position:fixed; bottom:0; left:0; right:0; z-index:9;
+    display:flex; justify-content:center; gap:10px;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(12,14,20,0.9), rgba(12,14,20,0));
+    pointer-events:none;
+  }
+  #contact-strip a{ pointer-events:auto; }
+  .pill{
+    font-family:'Space Grotesk', sans-serif; font-size:12.5px; font-weight:500;
+    padding:10px 16px; border-radius:100px;
+    border:1px solid rgba(255,255,255,0.1); color:#EDEEF3;
+    background:rgba(255,255,255,0.05); text-decoration:none; white-space:nowrap;
+  }
+  .pill.primary{ background:#FF6B4A; border-color:#FF6B4A; color:#1A0E0A; font-weight:600; }
+
+  #loading{
+    position:fixed; inset:0; background:#0c0e14; z-index:100;
+    display:flex; align-items:center; justify-content:center;
+    color:#9297AC; font-size:13px; font-family:'Space Grotesk', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">Loading room…</div>
+
+<div id="canvas-wrap"></div>
+
+<div id="hud-top">
+  <div>
+    <div class="brand">Kothakula Sagar</div>
+    <div class="role">Digital Marketing Executive</div>
+  </div>
+</div>
+
+<div id="hint">drag to look around · walk with the stick · tap a glowing panel</div>
+
+<div id="joystick">
+  <div id="joy-base"></div>
+  <div id="joy-knob"></div>
+</div>
+<div id="look-zone"></div>
+
+<div id="panel">
+  <div class="close">&times;</div>
+  <div class="tag" id="p-tag">Tag</div>
+  <h2 id="p-title">Title</h2>
+  <div class="desc" id="p-desc">Description</div>
+  <div class="stack" id="p-stack"></div>
+</div>
+
+<div id="contact-strip">
+  <a class="pill primary" id="contact-btn" href="mailto:youremail@example.com?subject=Hello%20Sagar">Get in touch</a>
+  <a class="pill" href="https://sagar-psycho.github.io/sagar-growth-systems/" target="_blank" rel="noopener">Full portfolio</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const projects = [
+  { tag: "Product · Internal Tool", title: "Abra FlowX CRM", desc: "A Firebase-backed sales CRM built for Abra Group's internal teams — tracking leads, assignments, and pipeline across the group's business verticals.", stack: ["Firebase", "Firestore", "JavaScript"] },
+  { tag: "Product · Simulator", title: "UPI Flow Lab", desc: "An educational 3D UPI payment simulator built with Three.js — grown from a single flow demo into a multi-module interactive lab.", stack: ["Three.js", "JavaScript", "WebGL"] },
+  { tag: "Marketing · SEO", title: "Abra Zylo SEO", desc: "An AI-powered SEO content generator built for Abra Zylo's OpenCart storefront — producing optimized product content at scale.", stack: ["OpenCart", "SEO", "AI"] },
+  { tag: "Product · Sales Tool", title: "Sales Call CRM", desc: "A sales call CRM with round-robin lead assignment, automatic call transcription via Groq Whisper, and role-based access control.", stack: ["React", "Vite", "Firebase", "Groq"] },
+  { tag: "Marketing · Growth", title: "Logistics Growth", desc: "End-to-end digital growth for Abra Logistics: Google Ads landing pages, Meta WhatsApp Business API setup, and an outbound voice agent.", stack: ["Google Ads", "Meta API", "Twilio"] },
+  { tag: "Personal Project", title: "TripSplit", desc: "A Firebase-backed progressive web app for splitting group trip expenses — built out of a real need while planning a trip.", stack: ["Firebase", "PWA", "JavaScript"] }
+];
+
+let scene, camera, renderer, clock;
+let yaw = 0, pitch = 0;
+const moveState = { forward:0, right:0 };
+const playerPos = new THREE.Vector3(0, 1.6, 8);
+const frames = [];
+let raycaster, pointer;
+
+init();
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0c0e14);
+  scene.fog = new THREE.Fog(0x0c0e14, 8, 26);
+
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.copy(playerPos);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  document.getElementById('canvas-wrap').appendChild(renderer.domElement);
+
+  clock = new THREE.Clock();
+  raycaster = new THREE.Raycaster();
+  pointer = new THREE.Vector2();
+
+  buildRoom();
+  buildLighting();
+  buildFrames();
+  buildFurniture();
+
+  setupControls();
+  window.addEventListener('resize', onResize);
+
+  document.getElementById('loading').style.display = 'none';
+  animate();
+}
+
+function buildRoom(){
+  const roomW = 14, roomD = 20, roomH = 5;
+
+  // Floor
+  const floorGeo = new THREE.PlaneGeometry(roomW, roomD, 20, 20);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1e30, roughness: 0.85, metalness: 0.1 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // subtle floor grid lines
+  const grid = new THREE.GridHelper(Math.max(roomW, roomD), 20, 0x2a3050, 0x1a1e30);
+  grid.position.y = 0.01;
+  scene.add(grid);
+
+  // Ceiling
+  const ceilMat = new THREE.MeshStandardMaterial({ color: 0x11131f, roughness:1 });
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomD), ceilMat);
+  ceiling.rotation.x = Math.PI/2;
+  ceiling.position.y = roomH;
+  scene.add(ceiling);
+
+  // Walls
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x181c2c, roughness: 0.9 });
+  const wallBack = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomH), wallMat);
+  wallBack.position.set(0, roomH/2, -roomD/2);
+  wallBack.receiveShadow = true;
+  scene.add(wallBack);
+
+  const wallFront = new THREE.Mesh(new THREE.PlaneGeometry(roomW, roomH), wallMat);
+  wallFront.position.set(0, roomH/2, roomD/2);
+  wallFront.rotation.y = Math.PI;
+  scene.add(wallFront);
+
+  const wallLeft = new THREE.Mesh(new THREE.PlaneGeometry(roomD, roomH), wallMat);
+  wallLeft.position.set(-roomW/2, roomH/2, 0);
+  wallLeft.rotation.y = Math.PI/2;
+  wallLeft.receiveShadow = true;
+  scene.add(wallLeft);
+
+  const wallRight = new THREE.Mesh(new THREE.PlaneGeometry(roomD, roomH), wallMat);
+  wallRight.position.set(roomW/2, roomH/2, 0);
+  wallRight.rotation.y = -Math.PI/2;
+  wallRight.receiveShadow = true;
+  scene.add(wallRight);
+
+  // Accent floor strip down the middle (like a gallery runway)
+  const stripMat = new THREE.MeshStandardMaterial({ color: 0xff6b4a, emissive: 0xff6b4a, emissiveIntensity: 0.08, roughness:0.6 });
+  const strip = new THREE.Mesh(new THREE.PlaneGeometry(1.2, roomD - 2), stripMat);
+  strip.rotation.x = -Math.PI/2;
+  strip.position.y = 0.02;
+  scene.add(strip);
+
+  window.roomBounds = { w: roomW/2 - 0.6, d: roomD/2 - 0.6 };
+}
+
+function buildLighting(){
+  const ambient = new THREE.AmbientLight(0x445, 0.5);
+  scene.add(ambient);
+
+  const key = new THREE.PointLight(0xffffff, 0.9, 20);
+  key.position.set(0, 4.5, 4);
+  key.castShadow = true;
+  scene.add(key);
+
+  // Warm spotlights above each frame position (set later per-frame too)
+  const rim = new THREE.PointLight(0x7fe8c4, 0.4, 16);
+  rim.position.set(0, 3, -8);
+  scene.add(rim);
+}
+
+function makeLabelTexture(title, tag){
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#171B2E';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2,2,canvas.width-4,canvas.height-4);
+
+  ctx.fillStyle = '#FF6B4A';
+  ctx.font = '600 22px sans-serif';
+  ctx.fillText(tag, 30, 60);
+
+  ctx.fillStyle = '#EDEEF3';
+  ctx.font = '700 40px sans-serif';
+  wrapText(ctx, title, 30, 130, 452, 48);
+
+  ctx.fillStyle = '#7FE8C4';
+  ctx.font = '500 18px sans-serif';
+  ctx.fillText('tap to view →', 30, canvas.height - 34);
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '';
+  let curY = y;
+  for(let i=0;i<words.length;i++){
+    const test = line + words[i] + ' ';
+    if(ctx.measureText(test).width > maxWidth && i>0){
+      ctx.fillText(line, x, curY);
+      line = words[i] + ' ';
+      curY += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line, x, curY);
+}
+
+function buildFrames(){
+  const roomD = 20, roomW = 14;
+  const spacing = (roomD - 4) / Math.ceil(projects.length/2);
+  let startZ = -roomD/2 + 3;
+
+  projects.forEach((p, i) => {
+    const side = i % 2 === 0 ? -1 : 1; // alternate left/right walls
+    const row = Math.floor(i/2);
+    const z = startZ + row * spacing;
+    const x = side * (roomW/2 - 0.08);
+
+    // Frame backing
+    const frameGeo = new THREE.BoxGeometry(0.08, 1.6, 2.2);
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x22263a, roughness:0.6, metalness:0.2 });
+    const frame = new THREE.Mesh(frameGeo, frameMat);
+    frame.position.set(x - side*0.05, 2, z);
+    frame.rotation.y = side > 0 ? -Math.PI/2 : Math.PI/2;
+    frame.castShadow = true;
+    scene.add(frame);
+
+    // Glowing canvas panel (the actual content, tappable)
+    const tex = makeLabelTexture(p.title, p.tag);
+    const panelMat = new THREE.MeshStandardMaterial({
+      map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35, roughness: 0.4
+    });
+    const panelGeo = new THREE.PlaneGeometry(1.9, 1.2);
+    const panel = new THREE.Mesh(panelGeo, panelMat);
+    panel.position.set(x - side*0.09, 2, z);
+    panel.rotation.y = side > 0 ? -Math.PI/2 : Math.PI/2;
+    panel.userData.project = p;
+    scene.add(panel);
+    frames.push(panel);
+
+    // small spotlight
+    const spot = new THREE.PointLight(0xffffff, 0.5, 4);
+    spot.position.set(x - side*0.6, 2.6, z);
+    scene.add(spot);
+  });
+}
+
+function buildFurniture(){
+  // Simple bench in the middle of the runway (low-poly, built from primitives)
+  const benchMat = new THREE.MeshStandardMaterial({ color: 0x2b2f45, roughness:0.7 });
+  for(let i=-1;i<=1;i+=2){
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 1.6), benchMat);
+    seat.position.set(i*1.4, 0.225, 0);
+    seat.castShadow = true;
+    scene.add(seat);
+  }
+
+  // Potted plant near entrance (cylinder pot + sphere cluster foliage)
+  const potMat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness:0.9 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6b4f, roughness:0.8 });
+  [[-5.5, 8], [5.5, 8], [-5.5, -8], [5.5, -8]].forEach(([x,z]) => {
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.5, 12), potMat);
+    pot.position.set(x, 0.25, z);
+    pot.castShadow = true;
+    scene.add(pot);
+    for(let i=0;i<4;i++){
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), leafMat);
+      leaf.position.set(x + (Math.random()-0.5)*0.4, 0.9 + Math.random()*0.4, z + (Math.random()-0.5)*0.4);
+      leaf.scale.set(1, 1.4, 1);
+      scene.add(leaf);
+    }
+  });
+
+  // Reception desk near entrance (front wall)
+  const deskMat = new THREE.MeshStandardMaterial({ color: 0x232838, roughness:0.5, metalness:0.3 });
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 0.8), deskMat);
+  desk.position.set(0, 0.5, 8.6);
+  desk.castShadow = true;
+  scene.add(desk);
+
+  // Name sign above entrance-facing wall (back wall, first thing you see)
+  const signCanvas = document.createElement('canvas');
+  signCanvas.width = 1024; signCanvas.height = 256;
+  const sctx = signCanvas.getContext('2d');
+  sctx.fillStyle = '#0c0e14';
+  sctx.fillRect(0,0,1024,256);
+  sctx.fillStyle = '#EDEEF3';
+  sctx.font = '700 72px sans-serif';
+  sctx.fillText('SAGAR', 40, 130);
+  sctx.fillStyle = '#FF6B4A';
+  sctx.font = '500 34px sans-serif';
+  sctx.fillText('Digital Marketing & Product Systems', 44, 190);
+  const signTex = new THREE.CanvasTexture(signCanvas);
+  const signMat = new THREE.MeshStandardMaterial({ map: signTex, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.5 });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), signMat);
+  sign.position.set(0, 3.2, -9.9);
+  scene.add(sign);
+}
+
+// --- Controls: drag to look, joystick to move ---
+function setupControls(){
+  const lookZone = document.getElementById('look-zone');
+  let looking = false, lastX = 0, lastY = 0;
+
+  function lookStart(x,y){ looking = true; lastX = x; lastY = y; }
+  function lookMove(x,y){
+    if(!looking) return;
+    const dx = x - lastX, dy = y - lastY;
+    yaw -= dx * 0.004;
+    pitch -= dy * 0.003;
+    pitch = Math.max(-0.6, Math.min(0.6, pitch));
+    lastX = x; lastY = y;
+  }
+  function lookEnd(){ looking = false; }
+
+  lookZone.addEventListener('mousedown', e => lookStart(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => lookMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', lookEnd);
+  lookZone.addEventListener('touchstart', e => lookStart(e.touches[0].clientX, e.touches[0].clientY), {passive:true});
+  lookZone.addEventListener('touchmove', e => lookMove(e.touches[0].clientX, e.touches[0].clientY), {passive:true});
+  lookZone.addEventListener('touchend', lookEnd);
+
+  // Keyboard (desktop)
+  window.addEventListener('keydown', e => {
+    if(e.key==='w'||e.key==='ArrowUp') moveState.forward = 1;
+    if(e.key==='s'||e.key==='ArrowDown') moveState.forward = -1;
+    if(e.key==='a'||e.key==='ArrowLeft') moveState.right = -1;
+    if(e.key==='d'||e.key==='ArrowRight') moveState.right = 1;
+  });
+  window.addEventListener('keyup', e => {
+    if(e.key==='w'||e.key==='s'||e.key==='ArrowUp'||e.key==='ArrowDown') moveState.forward = 0;
+    if(e.key==='a'||e.key==='d'||e.key==='ArrowLeft'||e.key==='ArrowRight') moveState.right = 0;
+  });
+
+  // Touch joystick
+  const isTouch = 'ontouchstart' in window;
+  const joystick = document.getElementById('joystick');
+  const knob = document.getElementById('joy-knob');
+  if(isTouch){
+    joystick.classList.add('active');
+    let joyActive = false, joyStartX=0, joyStartY=0;
+    joystick.addEventListener('touchstart', e => {
+      joyActive = true;
+      const t = e.touches[0];
+      joyStartX = t.clientX; joyStartY = t.clientY;
+      e.stopPropagation();
+    }, {passive:true});
+    joystick.addEventListener('touchmove', e => {
+      if(!joyActive) return;
+      const t = e.touches[0];
+      let dx = t.clientX - joyStartX, dy = t.clientY - joyStartY;
+      const max = 36;
+      const dist = Math.min(Math.hypot(dx,dy), max);
+      const ang = Math.atan2(dy,dx);
+      const kx = Math.cos(ang)*dist, ky = Math.sin(ang)*dist;
+      knob.style.transform = `translate(${kx}px, ${ky}px)`;
+      moveState.forward = -Math.sin(0) ; // placeholder, recompute below
+      moveState.forward = -(dy/max);
+      moveState.right = dx/max;
+      e.stopPropagation();
+    }, {passive:true});
+    joystick.addEventListener('touchend', () => {
+      joyActive = false;
+      knob.style.transform = 'translate(0,0)';
+      moveState.forward = 0; moveState.right = 0;
+    });
+  }
+
+  // Panel tap detection via raycast
+  function handleTap(clientX, clientY){
+    pointer.x = (clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(frames);
+    if(hits.length > 0){
+      openPanel(hits[0].object.userData.project);
+    }
+  }
+  renderer.domElement.addEventListener('click', e => handleTap(e.clientX, e.clientY));
+  renderer.domElement.addEventListener('touchend', e => {
+    if(e.changedTouches && e.changedTouches[0]){
+      const t = e.changedTouches[0];
+      // only treat as tap if it wasn't a look-drag (rough heuristic: short distance handled by look zone separation)
+      handleTap(t.clientX, t.clientY);
+    }
+  });
+}
+
+function openPanel(p){
+  document.getElementById('p-tag').textContent = p.tag;
+  document.getElementById('p-title').textContent = p.title;
+  document.getElementById('p-desc').textContent = p.desc;
+  const stack = document.getElementById('p-stack');
+  stack.innerHTML = '';
+  p.stack.forEach(s => {
+    const span = document.createElement('span');
+    span.textContent = s;
+    stack.appendChild(span);
+  });
+  document.getElementById('panel').classList.add('open');
+}
+document.querySelector('#panel .close').addEventListener('click', () => {
+  document.getElementById('panel').classList.remove('open');
+});
+
+function onResize(){
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  // Apply movement relative to yaw
+  const speed = 3.2;
+  const forwardX = Math.sin(yaw), forwardZ = Math.cos(yaw);
+  const rightX = Math.sin(yaw + Math.PI/2), rightZ = Math.cos(yaw + Math.PI/2);
+
+  let moveX = (forwardX * moveState.forward + rightX * moveState.right) * speed * dt;
+  let moveZ = (forwardZ * moveState.forward + rightZ * moveState.right) * speed * dt;
+
+  const b = window.roomBounds;
+  let nx = playerPos.x + moveX;
+  let nz = playerPos.z + moveZ;
+  if(b){
+    nx = Math.max(-b.w, Math.min(b.w, nx));
+    nz = Math.max(-b.d, Math.min(b.d, nz));
+  }
+  playerPos.x = nx; playerPos.z = nz;
+
+  camera.position.copy(playerPos);
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+
+  renderer.render(scene, camera);
+}
+</script>
+
+</body>
+</html>
