@@ -38,30 +38,6 @@
     transition:opacity 0.4s ease;
   }
 
-  /* touch joystick */
-  #joystick{
-    position:fixed; left:24px; bottom:24px;
-    width:100px; height:100px; z-index:12;
-    display:none;
-  }
-  #joystick.active{ display:block; }
-  #joy-base{
-    width:100%; height:100%; border-radius:50%;
-    background:rgba(255,255,255,0.06);
-    border:1px solid rgba(255,255,255,0.14);
-  }
-  #joy-knob{
-    position:absolute; top:50%; left:50%;
-    width:44px; height:44px; margin:-22px 0 0 -22px;
-    border-radius:50%;
-    background:rgba(255,107,74,0.85);
-    box-shadow:0 4px 12px rgba(0,0,0,0.4);
-  }
-
-  #look-zone{
-    position:fixed; right:0; top:0; bottom:0; width:55%; z-index:11;
-  }
-
   /* Info panel */
   #panel{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
@@ -127,13 +103,7 @@
   </div>
 </div>
 
-<div id="hint">drag to look around · walk with the stick · tap a glowing panel</div>
-
-<div id="joystick">
-  <div id="joy-base"></div>
-  <div id="joy-knob"></div>
-</div>
-<div id="look-zone"></div>
+<div id="hint">scroll to walk forward · drag to look · tap a panel</div>
 
 <div id="panel">
   <div class="close">&times;</div>
@@ -144,19 +114,22 @@
 </div>
 
 <div id="contact-strip">
-  <a class="pill primary" id="contact-btn" href="mailto:youremail@example.com?subject=Hello%20Sagar">Get in touch</a>
+  <a class="pill primary" id="contact-btn" href="mailto:kothakulasagar2002@gmail.com?subject=Hello%20Sagar">Get in touch</a>
+  <a class="pill" href="tel:+919380940559">Call</a>
   <a class="pill" href="https://sagar-psycho.github.io/sagar-growth-systems/" target="_blank" rel="noopener">Full portfolio</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const projects = [
-  { tag: "Product · Internal Tool", title: "Abra FlowX CRM", desc: "A Firebase-backed sales CRM built for Abra Group's internal teams — tracking leads, assignments, and pipeline across the group's business verticals.", stack: ["Firebase", "Firestore", "JavaScript"] },
-  { tag: "Product · Simulator", title: "UPI Flow Lab", desc: "An educational 3D UPI payment simulator built with Three.js — grown from a single flow demo into a multi-module interactive lab.", stack: ["Three.js", "JavaScript", "WebGL"] },
-  { tag: "Marketing · SEO", title: "Abra Zylo SEO", desc: "An AI-powered SEO content generator built for Abra Zylo's OpenCart storefront — producing optimized product content at scale.", stack: ["OpenCart", "SEO", "AI"] },
-  { tag: "Product · Sales Tool", title: "Sales Call CRM", desc: "A sales call CRM with round-robin lead assignment, automatic call transcription via Groq Whisper, and role-based access control.", stack: ["React", "Vite", "Firebase", "Groq"] },
-  { tag: "Marketing · Growth", title: "Logistics Growth", desc: "End-to-end digital growth for Abra Logistics: Google Ads landing pages, Meta WhatsApp Business API setup, and an outbound voice agent.", stack: ["Google Ads", "Meta API", "Twilio"] },
-  { tag: "Personal Project", title: "TripSplit", desc: "A Firebase-backed progressive web app for splitting group trip expenses — built out of a real need while planning a trip.", stack: ["Firebase", "PWA", "JavaScript"] }
+  { tag: "Performance Marketing", title: "Meta & Google Ads", desc: "Planned, set up, and executed Meta Ads and Google Ads campaigns across lead generation, website traffic, e-commerce/catalog promotions, app promotions, and service-based offerings — managing audience targeting, creative rollout, and campaign monitoring end-to-end.", stack: ["Google Ads", "Meta Ads Manager", "Lead Gen"] },
+  { tag: "SEO & Technical SEO", title: "Search Visibility", desc: "Executed keyword research, on-page SEO, meta titles/descriptions, internal linking, image alt attributes, and backlink activities. Audited sitemaps, robots.txt, indexing, canonical tags, and product schema markup for technical health.", stack: ["Rank Math", "Ahrefs", "SEMrush", "GSC"] },
+  { tag: "Analytics & Reporting", title: "Performance Tracking", desc: "Monitored search visibility, keyword rankings, and traffic using Google Search Console and Google Analytics. Compiled daily, weekly, and monthly reports covering campaign performance, ad spend, leads, and SEO metrics.", stack: ["Google Analytics", "GSC", "Reporting"] },
+  { tag: "E-commerce Marketing", title: "Abra Zylo Growth", desc: "Drove digital marketing for Abra Zylo, including Meta catalog advertising, product creatives, app promotion, and website visibility — while tracking campaign performance across the storefront.", stack: ["Meta Catalog", "OpenCart", "Firebase"] },
+  { tag: "Content & Creative", title: "AI-Assisted Creative", desc: "Designed social content, ad creatives, banners, and promotional assets using Canva and AI-based image/video generation tools. Produced SEO-driven content for websites, social media, and campaign messaging.", stack: ["Canva", "Groq AI", "Content"] },
+  { tag: "Web Management", title: "WordPress & Elementor", desc: "Managed and maintained WordPress websites using Elementor — page creation, content updates, responsive layouts, and SSL configuration, alongside basic HTML/CSS/JavaScript work.", stack: ["WordPress", "Elementor", "HTML/CSS/JS"] },
+  { tag: "Multi-Entity Support", title: "Group-Wide Marketing", desc: "Supported digital marketing across multiple Abra Group entities — logistics, e-commerce, travel, design & build, and global trading — adapting campaigns and content to each business context, including email and WhatsApp marketing.", stack: ["Email/WhatsApp", "Multi-brand"] },
+  { tag: "Education", title: "MBA, Marketing & IT", desc: "Akshara Institute of Management and Technology, Tirupati, Andhra Pradesh — MBA in Marketing and Information Technology, GPA 8.01.", stack: ["Marketing", "Information Technology"] }
 ];
 
 let scene, camera, renderer, clock;
@@ -165,6 +138,8 @@ const moveState = { forward:0, right:0 };
 const playerPos = new THREE.Vector3(0, 1.6, 8);
 const frames = [];
 let raycaster, pointer;
+let targetScrollZ = 0;
+let doorsTriggered = false;
 
 init();
 
@@ -187,15 +162,52 @@ function init(){
   pointer = new THREE.Vector2();
 
   buildRoom();
+  buildDoors();
   buildLighting();
   buildFrames();
   buildFurniture();
+
+  // Start the player just outside the doors, facing in
+  playerPos.set(0, 1.6, 11.5);
+  targetScrollZ = playerPos.z;
+  camera.position.copy(playerPos);
 
   setupControls();
   window.addEventListener('resize', onResize);
 
   document.getElementById('loading').style.display = 'none';
   animate();
+}
+
+function buildDoors(){
+  const doorMat = new THREE.MeshStandardMaterial({ color: 0x232838, roughness: 0.4, metalness: 0.5 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xFF6B4A, roughness: 0.5, metalness: 0.3, emissive: 0xFF6B4A, emissiveIntensity: 0.15 });
+
+  const doorGeo = new THREE.BoxGeometry(1.9, 3.6, 0.15);
+  const doorL = new THREE.Mesh(doorGeo, doorMat);
+  const doorR = new THREE.Mesh(doorGeo, doorMat);
+
+  // Pivot groups so doors swing from their outer edge
+  const pivotL = new THREE.Group();
+  const pivotR = new THREE.Group();
+  pivotL.position.set(-1.9, 1.8, 9.9);
+  pivotR.position.set(1.9, 1.8, 9.9);
+  doorL.position.set(0.95, 0, 0);
+  doorR.position.set(-0.95, 0, 0);
+  pivotL.add(doorL);
+  pivotR.add(doorR);
+  scene.add(pivotL, pivotR);
+
+  // Trim strip accent on each door
+  const trimGeo = new THREE.BoxGeometry(0.06, 3.6, 0.17);
+  const trimL = new THREE.Mesh(trimGeo, trimMat);
+  trimL.position.set(-0.02, 0, 0);
+  doorL.add(trimL);
+  const trimR = new THREE.Mesh(trimGeo, trimMat);
+  trimR.position.set(0.02, 0, 0);
+  doorR.add(trimR);
+
+  window.doors = { pivotL, pivotR, opened: false };
 }
 
 function buildRoom(){
@@ -393,10 +405,10 @@ function buildFurniture(){
   sctx.fillRect(0,0,1024,256);
   sctx.fillStyle = '#EDEEF3';
   sctx.font = '700 72px sans-serif';
-  sctx.fillText('SAGAR', 40, 130);
+  sctx.fillText('K SAGAR', 40, 130);
   sctx.fillStyle = '#FF6B4A';
-  sctx.font = '500 34px sans-serif';
-  sctx.fillText('Digital Marketing & Product Systems', 44, 190);
+  sctx.font = '500 30px sans-serif';
+  sctx.fillText('Performance Marketing · SEO · Paid Media', 44, 190);
   const signTex = new THREE.CanvasTexture(signCanvas);
   const signMat = new THREE.MeshStandardMaterial({ map: signTex, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.5 });
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), signMat);
@@ -404,77 +416,53 @@ function buildFurniture(){
   scene.add(sign);
 }
 
-// --- Controls: drag to look, joystick to move ---
+// --- Controls: scroll to move forward/back, drag to look left/right ---
 function setupControls(){
-  const lookZone = document.getElementById('look-zone');
-  let looking = false, lastX = 0, lastY = 0;
+  let dragging = false, lastX = 0, dragDist = 0;
 
-  function lookStart(x,y){ looking = true; lastX = x; lastY = y; }
-  function lookMove(x,y){
-    if(!looking) return;
-    const dx = x - lastX, dy = y - lastY;
+  function dragStart(x){ dragging = true; lastX = x; dragDist = 0; }
+  function dragMove(x){
+    if(!dragging) return;
+    const dx = x - lastX;
+    dragDist += Math.abs(dx);
     yaw -= dx * 0.004;
-    pitch -= dy * 0.003;
-    pitch = Math.max(-0.6, Math.min(0.6, pitch));
-    lastX = x; lastY = y;
+    lastX = x;
   }
-  function lookEnd(){ looking = false; }
+  function dragEnd(){ dragging = false; }
 
-  lookZone.addEventListener('mousedown', e => lookStart(e.clientX, e.clientY));
-  window.addEventListener('mousemove', e => lookMove(e.clientX, e.clientY));
-  window.addEventListener('mouseup', lookEnd);
-  lookZone.addEventListener('touchstart', e => lookStart(e.touches[0].clientX, e.touches[0].clientY), {passive:true});
-  lookZone.addEventListener('touchmove', e => lookMove(e.touches[0].clientX, e.touches[0].clientY), {passive:true});
-  lookZone.addEventListener('touchend', lookEnd);
+  renderer.domElement.addEventListener('mousedown', e => dragStart(e.clientX));
+  window.addEventListener('mousemove', e => dragMove(e.clientX));
+  window.addEventListener('mouseup', dragEnd);
+  renderer.domElement.addEventListener('touchstart', e => dragStart(e.touches[0].clientX), {passive:true});
+  renderer.domElement.addEventListener('touchmove', e => dragMove(e.touches[0].clientX), {passive:true});
+  renderer.domElement.addEventListener('touchend', dragEnd);
 
-  // Keyboard (desktop)
-  window.addEventListener('keydown', e => {
-    if(e.key==='w'||e.key==='ArrowUp') moveState.forward = 1;
-    if(e.key==='s'||e.key==='ArrowDown') moveState.forward = -1;
-    if(e.key==='a'||e.key==='ArrowLeft') moveState.right = -1;
-    if(e.key==='d'||e.key==='ArrowRight') moveState.right = 1;
-  });
-  window.addEventListener('keyup', e => {
-    if(e.key==='w'||e.key==='s'||e.key==='ArrowUp'||e.key==='ArrowDown') moveState.forward = 0;
-    if(e.key==='a'||e.key==='d'||e.key==='ArrowLeft'||e.key==='ArrowRight') moveState.right = 0;
-  });
+  // Scroll (wheel) to move forward/back. Player can range from just outside the doors (z~11.5) to the far wall (z~-8.5)
+  window.addEventListener('wheel', e => {
+    triggerDoorsIfNeeded();
+    targetScrollZ -= e.deltaY * 0.02;
+    targetScrollZ = Math.max(-8.5, Math.min(11.5, targetScrollZ));
+  }, { passive: true });
 
-  // Touch joystick
-  const isTouch = 'ontouchstart' in window;
-  const joystick = document.getElementById('joystick');
-  const knob = document.getElementById('joy-knob');
-  if(isTouch){
-    joystick.classList.add('active');
-    let joyActive = false, joyStartX=0, joyStartY=0;
-    joystick.addEventListener('touchstart', e => {
-      joyActive = true;
-      const t = e.touches[0];
-      joyStartX = t.clientX; joyStartY = t.clientY;
-      e.stopPropagation();
-    }, {passive:true});
-    joystick.addEventListener('touchmove', e => {
-      if(!joyActive) return;
-      const t = e.touches[0];
-      let dx = t.clientX - joyStartX, dy = t.clientY - joyStartY;
-      const max = 36;
-      const dist = Math.min(Math.hypot(dx,dy), max);
-      const ang = Math.atan2(dy,dx);
-      const kx = Math.cos(ang)*dist, ky = Math.sin(ang)*dist;
-      knob.style.transform = `translate(${kx}px, ${ky}px)`;
-      moveState.forward = -Math.sin(0) ; // placeholder, recompute below
-      moveState.forward = -(dy/max);
-      moveState.right = dx/max;
-      e.stopPropagation();
-    }, {passive:true});
-    joystick.addEventListener('touchend', () => {
-      joyActive = false;
-      knob.style.transform = 'translate(0,0)';
-      moveState.forward = 0; moveState.right = 0;
-    });
-  }
+  // Mobile: vertical swipe also moves forward/back
+  let touchStartY = null;
+  renderer.domElement.addEventListener('touchstart', e => {
+    if(e.touches.length === 1) touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  renderer.domElement.addEventListener('touchmove', e => {
+    if(touchStartY === null || dragDist > 20) return; // let drags-for-looking win if mostly horizontal
+    const dy = e.touches[0].clientY - touchStartY;
+    if(Math.abs(dy) > 4){
+      triggerDoorsIfNeeded();
+      targetScrollZ += dy * 0.03;
+      targetScrollZ = Math.max(-8.5, Math.min(11.5, targetScrollZ));
+      touchStartY = e.touches[0].clientY;
+    }
+  }, {passive:true});
 
-  // Panel tap detection via raycast
+  // Panel tap detection via raycast (only fires if it wasn't a drag)
   function handleTap(clientX, clientY){
+    if(dragDist > 8) return; // was a drag, not a tap
     pointer.x = (clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
@@ -487,10 +475,18 @@ function setupControls(){
   renderer.domElement.addEventListener('touchend', e => {
     if(e.changedTouches && e.changedTouches[0]){
       const t = e.changedTouches[0];
-      // only treat as tap if it wasn't a look-drag (rough heuristic: short distance handled by look zone separation)
       handleTap(t.clientX, t.clientY);
     }
+    touchStartY = null;
   });
+
+  document.getElementById('hint').textContent = 'scroll to walk forward · drag to look · tap a panel';
+}
+
+function triggerDoorsIfNeeded(){
+  if(doorsTriggered) return;
+  doorsTriggered = true;
+  document.getElementById('hint').style.opacity = '0';
 }
 
 function openPanel(p){
@@ -520,25 +516,18 @@ function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  // Apply movement relative to yaw
-  const speed = 3.2;
-  const forwardX = Math.sin(yaw), forwardZ = Math.cos(yaw);
-  const rightX = Math.sin(yaw + Math.PI/2), rightZ = Math.cos(yaw + Math.PI/2);
-
-  let moveX = (forwardX * moveState.forward + rightX * moveState.right) * speed * dt;
-  let moveZ = (forwardZ * moveState.forward + rightZ * moveState.right) * speed * dt;
-
-  const b = window.roomBounds;
-  let nx = playerPos.x + moveX;
-  let nz = playerPos.z + moveZ;
-  if(b){
-    nx = Math.max(-b.w, Math.min(b.w, nx));
-    nz = Math.max(-b.d, Math.min(b.d, nz));
-  }
-  playerPos.x = nx; playerPos.z = nz;
+  // Smoothly ease player's z position toward the scroll target (forward = -z)
+  playerPos.z += (targetScrollZ - playerPos.z) * Math.min(dt * 6, 1);
 
   camera.position.copy(playerPos);
   camera.rotation.set(pitch, yaw, 0, 'YXZ');
+
+  // Door opening animation
+  if(window.doors){
+    const targetAngle = doorsTriggered ? Math.PI * 0.55 : 0;
+    window.doors.pivotL.rotation.y += (-targetAngle - window.doors.pivotL.rotation.y) * Math.min(dt * 2.2, 1);
+    window.doors.pivotR.rotation.y += (targetAngle - window.doors.pivotR.rotation.y) * Math.min(dt * 2.2, 1);
+  }
 
   renderer.render(scene, camera);
 }
